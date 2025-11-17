@@ -1,14 +1,18 @@
 package Model;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import utils.FitchTool;
+import utils.TreeUtils;
+import utils.UndoMachine;
+
+import java.util.*;
 
 public class Node {
     private String label;
     private List<Node> children = new ArrayList<>();
+    private Set<Node> descendantLeaves = new HashSet<>();
     private Node parent;
     private Node twin;
+    private Node sibling = null;
     private int depth;
     private boolean isLeaf;
     private boolean isRoot;
@@ -24,6 +28,7 @@ public class Node {
         this.isRoot = isRoot;
     }
 
+
     public Node(String label, int depth, boolean isLeaf, boolean isRoot){
         this.label = label;
         this.depth = depth;
@@ -36,25 +41,34 @@ public class Node {
         this.isRoot = isRoot;
     }
 
-    public Node deepClone(){
-        Node left = null;
-        Node right = null;
-        Node copy = new Node(this.label, this.depth, this.isLeaf, this.isRoot);
+    public Node() {
 
-        if (this.children.getFirst() != null) {
-            left = deepCloneHelper(this.children.getFirst(), copy);
-        }
-        if (this.children.getLast() != null) {
-            right = deepCloneHelper(this.children.getLast(), copy);
-        }
-        List<Node> cloneChildren = new ArrayList<>();
-        cloneChildren.add(left);
-        cloneChildren.add(right);
-        copy.setChildren(cloneChildren);
-
-        return copy;
     }
 
+
+    public Node(String name){
+        this.label = name;
+    }
+
+//    public Node deepClone(){
+//        Node left = null;
+//        Node right = null;
+//        Node copy = new Node(this.label, this.depth, this.isLeaf, this.isRoot);
+//
+//        if (this.children.getFirst() != null) {
+//            left = deepCloneHelper(this.children.getFirst(), copy);
+//        }
+//        if (this.children.getLast() != null) {
+//            right = deepCloneHelper(this.children.getLast(), copy);
+//        }
+//        List<Node> cloneChildren = new ArrayList<>();
+//        cloneChildren.add(left);
+//        cloneChildren.add(right);
+//        copy.setChildren(cloneChildren);
+//
+//        return copy;
+//    }
+//
     public Node(Node original) {
         this.label = original.getLabel();
         this.depth = original.getDepth();
@@ -68,29 +82,45 @@ public class Node {
         }
     }
 
-    private Node copyHelper(Node original, Node copyOfParent) {
+    public Node(Node original, Set<String> allowedLabels) {
+        this.label = original.getLabel();
+        this.depth = original.getDepth();
+        this.isLeaf = original.isLeaf();
+        this.isRoot = original.isRoot();
+        this.parent = null;
+        for (Node child : original.getChildren()) {
+            if (!child.isLeaf() || allowedLabels.contains(child.getLabel())) {
+                Node childCopy = new Node(child, allowedLabels);
+                childCopy.setParent(this);
+                this.addChild(childCopy);
+            }
 
-        return null;
-    }
-
-    private Node deepCloneHelper(Node originalNode, Node copyOfParent) {
-        Node copy = new Node(originalNode.getLabel(), originalNode.getDepth(), originalNode.isLeaf(), originalNode.isRoot());
-        Node left = null;
-        Node right = null;
-        copy.setParent(copyOfParent);
-        List<Node> childrenOfOriginal = originalNode.getChildren();
-        if (childrenOfOriginal.getFirst() != null) {
-            left = deepCloneHelper(childrenOfOriginal.getFirst(), copy);
         }
-        if (childrenOfOriginal.getLast() != null) {
-            right = deepCloneHelper(childrenOfOriginal.getLast(), copy);
-        }
-        List<Node> cloneChildren = new ArrayList<>();
-        cloneChildren.add(left);
-        cloneChildren.add(right);
-        copy.setChildren(cloneChildren);
-        return copy;
     }
+//
+//    private Node copyHelper(Node original, Node copyOfParent) {
+//
+//        return null;
+//    }
+//
+//    private Node deepCloneHelper(Node originalNode, Node copyOfParent) {
+//        Node copy = new Node(originalNode.getLabel(), originalNode.getDepth(), originalNode.isLeaf(), originalNode.isRoot());
+//        Node left = null;
+//        Node right = null;
+//        copy.setParent(copyOfParent);
+//        List<Node> childrenOfOriginal = originalNode.getChildren();
+//        if (childrenOfOriginal.getFirst() != null) {
+//            left = deepCloneHelper(childrenOfOriginal.getFirst(), copy);
+//        }
+//        if (childrenOfOriginal.getLast() != null) {
+//            right = deepCloneHelper(childrenOfOriginal.getLast(), copy);
+//        }
+//        List<Node> cloneChildren = new ArrayList<>();
+//        cloneChildren.add(left);
+//        cloneChildren.add(right);
+//        copy.setChildren(cloneChildren);
+//        return copy;
+//    }
 
     public String getLabel(){
         return label;
@@ -100,12 +130,20 @@ public class Node {
         return children;
     }
 
+    public Set<Node> getDescendantLeaves() {
+        return descendantLeaves;
+    }
+
     public Node getParent(){
         return parent;
     }
 
     public Node getTwin(){
         return twin;
+    }
+
+    public Node getSibling() {
+        return sibling;
     }
 
     public int getDepth(){
@@ -123,6 +161,9 @@ public class Node {
         this.children = children;
     }
 
+    public void setDescendantLeaves(Set<Node> descendantLeaves) {
+        this.descendantLeaves = descendantLeaves;
+    }
 
     public void setDepth(int depth) {
         this.depth = depth;
@@ -144,6 +185,10 @@ public class Node {
         this.twin = twin;
     }
 
+    public void setSibling(Node cherryPartner) {
+        this.sibling = cherryPartner;
+    }
+
     public boolean isRoot() {
         return this.isRoot;
     }
@@ -156,6 +201,31 @@ public class Node {
     public void addChild(Node child) {
         this.children.add(child);
         child.setParent(this);
+    }
+
+    public void addChild(int index, Node child) {
+        this.children.add(index, child);
+        child.setParent(this);
+    }
+
+    private Set<Node> computeDescendantLeaves(Node node) {
+        if (node == null) return Collections.emptySet();
+
+        // Leaf node: descendant leaves = itself
+        if (node.isLeaf()) {
+            Set<Node> leaves = new HashSet<>();
+            leaves.add(node);
+            node.setDescendantLeaves(leaves);
+            return leaves;
+        }
+
+        // Internal node: union of children's leaves
+        Set<Node> leaves = new HashSet<>();
+        for (Node child : node.getChildren()) {
+            leaves.addAll(computeDescendantLeaves(child));
+        }
+        node.setDescendantLeaves(leaves);
+        return leaves;
     }
 
 //    @Override
@@ -174,27 +244,43 @@ public class Node {
 
 
     public static void main(String[] args) {
-        Node root = new Node("1", 0, false, true);
-        Node node1 = new Node("2", 0, true, false);
-        Node node2 = new Node("3", 0, true, false);
-        root.addChild(node1);
-        root.addChild(node2);
-        Node root2 = new Node(0, true);
-        Node root3 = root2;
+        Forest F1 = Forest.readNewickFormat("((((1,2),(3,4)),((5,6),(7,8))),(((9,10),(11,12)),((13,14),(15,16))))");
+        Forest F2 = Forest.readNewickFormat("(((7,8),((1,(2,(14,5))),(3,4))),(((11,(6,12)),10),((13,(15,16)),9)))");
 
-        if (root2 == root3) {
-            System.out.println("they are equal");
-        }
+        ProblemInstance instance = new ProblemInstance(F1, F2);
+        instance.printTrees();
+        //TreeUtils.printAsciiTree(F2.getComponent(0));
+        TreeUtils.linkForests(F1, F2);
+        TreeUtils.linkSiblings(F1);
+        TreeUtils.linkSiblings(F2);
 
-        System.out.println(root.getLabel());
+        Node root = F2.getComponents().removeFirst();
+
+        F2.addComponent(root.getChildren().getFirst());
+        F2.addComponent(root.getChildren().getLast());
+        //TreeUtils.printAsciiTree(F2.getComponent(0));
+        //instance.printTrees();
+
         Node copyOfRoot = new Node(root);
-        System.out.println(copyOfRoot.getChildren());
-        List<Node> childrenOfCopy = copyOfRoot.getChildren();
-        System.out.println(root);
-        System.out.println(copyOfRoot);
-        for (Node n : childrenOfCopy) {
-            System.out.println(n.getParent());
-        }
+        System.out.println("copy of root");
+        TreeUtils.printAsciiTree(copyOfRoot);
+
+
+
+        FitchTool tool = new FitchTool(instance);
+        System.out.println(tool.getPScore());
+        System.out.println(tool.getColours().size());
+
+
+        ProblemInstance subInstance = instance.makeSubProblem(F2.getComponent(0), tool.getColours().getFirst());
+
+        System.out.println("Number of union events: " + tool.getPScore());
+        //TreeUtils.printAsciiTree(subInstance.getF1().getComponent(0));
+        //TreeUtils.printAsciiTree(subInstance.getF2().getComponent(0));
+
+        System.out.println(tool.getColours().getFirst());
+
+
 
     }
 }
