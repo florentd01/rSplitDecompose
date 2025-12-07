@@ -21,7 +21,8 @@ public class Conflict {
     }
 
     public Conflict(List<Cut> cuts){
-        this.cuts = cuts;
+        this.cuts = new ArrayList<>();
+        this.cuts.addAll(cuts);
     }
 
     public void addCut(Cut cut){
@@ -33,6 +34,8 @@ public class Conflict {
     }
 
     public void setCuts(List<Cut> cuts) {
+
+        ;
         this.cuts = cuts;
     }
 }

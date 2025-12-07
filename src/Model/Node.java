@@ -16,6 +16,7 @@ public class Node {
     private int depth;
     private boolean isLeaf;
     private boolean isRoot;
+    private int Id;
 
 
     public Node(String label, List<Node> children, Node p, Node twin, int depth, boolean isLeaf, boolean isRoot){
@@ -39,6 +40,14 @@ public class Node {
     public Node(int depth, boolean isRoot) {
         this.depth = depth;
         this.isRoot = isRoot;
+    }
+
+    public void setId(int ID) {
+        this.Id = ID;
+    }
+
+    public int getId() {
+        return Id;
     }
 
     public Node() {
@@ -75,6 +84,7 @@ public class Node {
         this.isLeaf = original.isLeaf();
         this.isRoot = original.isRoot();
         this.parent = null;
+        this.Id = original.getId();
         for (Node child : original.getChildren()) {
             Node childCopy = new Node(child);
             childCopy.setParent(this);
@@ -88,6 +98,7 @@ public class Node {
         this.isLeaf = original.isLeaf();
         this.isRoot = original.isRoot();
         this.parent = null;
+        this.Id = original.getId();
         for (Node child : original.getChildren()) {
             if (!child.isLeaf() || allowedLabels.contains(child.getLabel())) {
                 Node childCopy = new Node(child, allowedLabels);

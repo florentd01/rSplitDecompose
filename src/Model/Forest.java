@@ -5,12 +5,12 @@ import utils.TreeUtils;
 import utils.UndoMachine;
 
 import java.util.*;
-import utils.TreeUtils.*;
 
 public class Forest {
     private List<Node> components = new ArrayList<>();
     private Forest twin;
     private final Map<String, Node> leavesByLabel = new HashMap<>();
+    private List<Set<String>> leafLabelsList = new ArrayList<>();
 
     public Forest() {
         this.twin = null;
@@ -21,7 +21,28 @@ public class Forest {
         this.twin = null;
     }
 
-    private void buildLeafMap() {
+    public Forest(Node root) {
+        this.components.add(root);
+        buildLeafMap();
+    }
+
+    public Forest(Forest original) {
+        for (Node component : original.getComponents()) {
+            this.components.add(new Node(component));
+        }
+        buildLeafMap();
+        TreeUtils.linkSiblings(this);
+    }
+
+    public List<Set<String>> getLeafLabelsList() {
+        return leafLabelsList;
+    }
+
+    public void setLeafLabelsList(List<Set<String>> leafLabelsList) {
+        this.leafLabelsList =leafLabelsList;
+    }
+
+    public void buildLeafMap() {
         for (Node component : components) {
             recursiveLeafMapBuilder(component);
         }
@@ -30,6 +51,11 @@ public class Forest {
     private void recursiveLeafMapBuilder(Node node) {
         if (node.isLeaf()) {
             leavesByLabel.put(node.getLabel(), node);
+            if (Objects.equals(node.getLabel(), "rho")) {
+                for (Node child : node.getChildren()) {
+                    recursiveLeafMapBuilder(child);
+                }
+            }
         } else {
             for (Node child : node.getChildren()) {
                 recursiveLeafMapBuilder(child);
@@ -107,7 +133,7 @@ public class Forest {
         Forest T1 = twin;
         for (int i = 0; i < components.size();i++) {
             Node component = components.get(i);
-            if (component.isLeaf()){
+            if (component.isLeaf() && component.getChildren().isEmpty()){
                 didSomething = true;
                 components.remove(i);
                 if (this.getLeavesByLabel().size() != T1.getLeavesByLabel().size()) {
@@ -181,6 +207,10 @@ public class Forest {
     }
 
     private boolean suppressDegTwo(Node node, UndoMachine um) {
+//        if (getLeavesByLabel().get("430") == node) {
+//            System.out.println("here we see supress fails");
+//        }
+
         boolean didSomething = false;
         if (node.getChildren().size() == 1) {
             Node child = node.getChildren().getFirst();
@@ -403,10 +433,62 @@ public class Forest {
 
 
     public boolean sameCherry(Node leaf) {
+        if (leaf.getSibling() == null) {
+            System.out.println("leaf sibling is null");
+            System.out.println("T1");
+            TreeUtils.printAsciiTree(this.getTwin().getComponent(0));
+            System.out.println("F2");
+            TreeUtils.printAsciiTree(this.getComponent(0));
+            TreeUtils.printAsciiTree(this.getComponent(1));
+        }
         if (leaf.getSibling().isLeaf() && leaf.getTwin().getSibling().isLeaf()) {
             return Objects.equals(leaf.getSibling().getLabel(), leaf.getTwin().getSibling().getLabel());
         }
         return false;
+    }
+
+    public void printForest() {
+        System.out.println("Displaying all components");
+        for (Node component : components) {
+            TreeUtils.printAsciiTree(component);
+        }
+    }
+
+    /**
+     * Returns a list of Newick strings, one for each component in the forest.
+     */
+    public List<String> toNewickList() {
+        List<String> newickStrings = new ArrayList<>();
+        for (Node root : components) {
+            StringBuilder sb = new StringBuilder();
+            buildNewick(root, sb);
+            sb.append(";"); // end of Newick
+            newickStrings.add(sb.toString());
+        }
+        return newickStrings;
+    }
+
+    // Recursive helper to convert a single tree to Newick
+    private void buildNewick(Node node, StringBuilder sb) {
+        if (node.isLeaf()) {
+            sb.append(node.getLabel());
+            return;
+        }
+
+        sb.append("(");
+        List<Node> children = node.getChildren();
+        for (int i = 0; i < children.size(); i++) {
+            buildNewick(children.get(i), sb);
+            if (i < children.size() - 1) {
+                sb.append(",");
+            }
+        }
+        sb.append(")");
+
+        // Append internal label if present
+        if (node.getLabel() != null && !node.getLabel().isEmpty()) {
+            sb.append(node.getLabel());
+        }
     }
 
     private static String[] split(String s) {

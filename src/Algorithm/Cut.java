@@ -20,6 +20,10 @@ public class Cut {
 
     }
 
+    public int getIndexInChildrenList() {
+        return indexInChildrenList;
+    }
+
     // TODO: properly set parent for child
     public void makeCut() {
         problemParent.getChildren().remove(problemChild);

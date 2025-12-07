@@ -46,7 +46,16 @@ public class UndoMachine {
 
         @Override
         public void undo() {
+            Set<String> cDescendants = child.getDescendantLabels();
+            parent.getChildren().add(index, child);
 
+            SplitTool.SplitTreeNode temp = parent;
+
+            while (temp != null) {
+
+                temp.getDescendantLabels().addAll(cDescendants);
+                temp = temp.getParent();
+            }
         }
     }
 
@@ -66,7 +75,8 @@ public class UndoMachine {
             if (parent == null) {
                 System.out.println("WEEWOO ALARM");
             }
-            this.index = parent.getChildren().indexOf(child);
+            assert parent != null;
+            this.index = cut.getIndexInChildrenList();
         }
 
 
@@ -175,7 +185,7 @@ public class UndoMachine {
             F2.addComponent(indexF2, component);
             switch (caseNum) {
                 case 0:
-                    System.out.println("we got here somehow");
+                    //System.out.println("we got here somehow");
                     T1.addComponent(componentInT1);
                     T1.getLeavesByLabel().put(componentInT1.getLabel(), componentInT1);
                     break;
