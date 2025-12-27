@@ -18,7 +18,7 @@ public class DecomposeTool {
     String[] args;
     Random randomizer;
 
-    List<Cut> trueCurrentCut;
+    List<Cut> trueCurrentCut = new ArrayList<>();
 
     public DecomposeTool(ProblemInstance pi, int t) {
         this.mainProblem = pi;
@@ -31,14 +31,19 @@ public class DecomposeTool {
         this.args = args;
     }
 
-    public DecomposeTool(ProblemInstance pi, int t, String[] args, Random randomizer, List<Cut> currentCuts) {
+    public DecomposeTool(ProblemInstance pi, int t, String[] args, Random randomizer) {
         this.mainProblem = pi;
+        //pi.printTrees();
         this.t = t;
         this.args = args;
         this.randomizer = randomizer;
-        this.trueCurrentCut = currentCuts;
         //System.out.println(Arrays.toString(args));
         //System.out.println("New decomposer created");
+    }
+
+
+    public List<Cut> getTrueCurrentCuts() {
+        return trueCurrentCut;
     }
 
     /**
@@ -47,7 +52,7 @@ public class DecomposeTool {
      * @return true if solution exists false if it doesn't
      */
     public boolean decomposeProblem(int k){
-        if (k < 2) {
+        if (k < 1) {
             return false;
         }
 
@@ -64,7 +69,7 @@ public class DecomposeTool {
         for (int i = 0; i < this.subProblems.size(); i++) {
             ProblemInstance subInstance = this.subProblems.get(i);
             MAFSolver solver = new MAFSolver(subInstance, randomizer);
-            for (int j = 1; j <= t; j++) {
+            for (int j = 0; j <= t; j++) {
                 boolean works = solver.search(j);
                 this.totalStatesExplored+= solver.getNumStates();
                 if (works) {
@@ -88,7 +93,7 @@ public class DecomposeTool {
 
         }
         // step 2 for all subproblems that could not be solved to t, solve to depth k-(sum of returns from solveToT for all other subproblems)
-        String[] args = new String[1];
+
 
         subProblems = new ArrayList<>();
         buildSubInstances();

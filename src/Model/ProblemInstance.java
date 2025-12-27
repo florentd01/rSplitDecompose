@@ -24,6 +24,20 @@ public class ProblemInstance {
         this.F2 = F2;
     }
 
+    public ProblemInstance(ProblemInstance original) {
+        Forest T1 = new Forest(original.getF1());
+        Forest F2 = new Forest(original.getF2());
+        TreeUtils.linkSiblings(T1);
+        TreeUtils.linkSiblings(F2);
+        TreeUtils.linkForests(T1, F2);
+
+        this.F1 = T1;
+        this.F2 = F2;
+        this.originalF2 = null;
+
+
+    }
+
     public ProblemInstance makeSubProblem(Node rootInF2, Set<String> leafSet) {
 //        System.out.println("Printing trees for decompose");
 //        printTrees();

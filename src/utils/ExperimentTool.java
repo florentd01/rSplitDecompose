@@ -483,6 +483,8 @@ public class ExperimentTool {
         String input = runExecutableWithInputLines("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\rspr-1.3.0\\rspr.exe", argumentsRSPR, inputLines).trim();
 
         System.out.println(input);
+        String[] lastLines = getLastThreeLines(input);
+
         int finalResult = extractInteger(input);
 
         System.out.println(finalResult);
@@ -532,6 +534,30 @@ public class ExperimentTool {
         return -1;
     }
 
+    public static String[] getLastThreeLines(String text) {
+        if (text == null || text.isEmpty()) {
+            return new String[0]; // no lines
+        }
+
+        // Split into lines
+        String[] lines = text.split("\\R");  // \R matches any line break
+
+        // Check final line for marker
+        String finalLine = lines[lines.length - 1];
+        if (!finalLine.contains("exact drSPR")) {
+            return new String[0]; // marker not present
+        }
+
+        // Determine how many lines to return
+        int count = Math.min(3, lines.length);
+
+        // Copy last 'count' lines
+        String[] result = new String[count];
+        System.arraycopy(lines, lines.length - count, result, 0, count);
+
+        return result;
+    }
+
     public static void appendLineToFile(String filePath, String line) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(filePath, true))) {
             writer.newLine();
@@ -541,12 +567,30 @@ public class ExperimentTool {
         }
     }
 
+    public static void test1() throws Exception {
+        String trees = Files.readString(Path.of("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\trees_100_17.txt"));
+
+        String result = runRsprOnTrees(trees);
+
+        String[] final3 = getLastThreeLines(result);
+
+        int trueRes = extractInteger(final3[2]);
+
+        System.out.println(final3[0]);
+        System.out.println(final3[1]);
+
+        System.out.println(trueRes);
+
+
+    }
+
 
 
     public static void main(String[] args) throws Exception {
         //testRandomRSPR();
         //testTreeGen();
-        RSPRWithTreeGen();
+        //RSPRWithTreeGen();
+        test1();
 
 //        String inputLines = "((((1,2),(3,4)),((5,6),(7,8))),(((9,10),(11,12)),((13,14),(15,16))));\n" +
 //                "(((7,8),((1,(2,(14,5))),(3,4))),(((11,(6,12)),10),((13,(15,16)),9)));";

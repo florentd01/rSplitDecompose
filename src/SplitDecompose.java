@@ -35,6 +35,22 @@ public class SplitDecompose {
         return new ProblemInstance(T1, F2);
     }
 
+
+    public static ProblemInstance problemInstanceFromTreeStringArray(String[] trees) {
+        String line1 = trees[0];
+        String line2 = trees[1];
+
+
+        Forest T1 = Forest.readNewickFormat(line1);
+        Forest F2 = Forest.readNewickFormat(line2);
+
+        TreeUtils.linkForests(T1, F2);
+        TreeUtils.linkSiblings(T1);
+        TreeUtils.linkSiblings(F2);
+
+        return new ProblemInstance(T1, F2);
+    }
+
     public static void SplitDecomposeOnDB() throws IOException {
         File dir = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\kernelizing_agreement_forests_data\\maindataset");
         try {
@@ -142,16 +158,17 @@ public class SplitDecompose {
 
 
 
-    public static void compareRsprSplitDecompose(int stepCounter) throws Exception {
+    public static void compareRsprSplitDecompose(int stepCounter, String[] treeGenArgs, String[] splitDecomposeArgs, String[] logFileNames) throws Exception {
         //ProblemInstance instance = problemInstanceWithRhoFromTreeStringArray(trees);
-        String logFilePath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\Test\\logs.txt";
-        String resultsFilePath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\Test\\results_comparison.csv";
+        String logFilePath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\Test_logs\\" + logFileNames[0];
+        String resultsFilePath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\Test_logs\\" + logFileNames[1];
+        String mismatchIdPath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\Test_logs\\" + logFileNames[2];
 
         String[] treeFilePaths = {"C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\RandomTree.jar",
                 "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\RandomRSPR.jar"};
 
 
-        String trees = ExperimentTool.generateTreePair("50", "0", "50", "10", treeFilePaths, null);
+        String trees = ExperimentTool.generateTreePair(treeGenArgs[0], treeGenArgs[1], treeGenArgs[2], treeGenArgs[3], treeFilePaths, null);
 
         System.out.println(trees);
 
@@ -163,22 +180,28 @@ public class SplitDecompose {
 
         long rsprDuration = (endTimeRspr - startTimeRspr)/1000000;
 
-        int rsprResult = ExperimentTool.extractInteger(rsprResultString);
+        String[] rsprFinal3 = ExperimentTool.getLastThreeLines(rsprResultString);
+
+        int rsprResult = -1;
+        if (rsprFinal3.length == 3) {
+            rsprResult = ExperimentTool.extractInteger(rsprFinal3[2]);
+        }
 
         System.out.println(rsprResultString);
 
         if (rsprResult != -1) {
-            String[] arguments = new String[2];
-            arguments[0] = "split-decompose";
-            arguments[1] = "2";
 
+
+            //ProblemInstance instance = problemInstanceFromTreeStringArray(trees.split("\\r?\\n"));
             ProblemInstance instance = problemInstanceWithRhoFromTreeStringArray(trees.split("\\r?\\n"));
-            MAFSolver solver = new MAFSolver(instance, new Random(1), arguments);
+            instance.printTrees();
+
+            MAFSolver solver = new MAFSolver(instance, new Random(1), splitDecomposeArgs);
 
             int trueSolution = -1;
 
             long startSD = System.nanoTime();
-            for (int i = 1; i < 11; i++) {
+            for (int i = 10; i < 21; i++) {
                 System.out.println("SEARCHING AT K = " + i);
                 boolean works = solver.advancedSearch(i);
 
@@ -199,19 +222,34 @@ public class SplitDecompose {
 
             long durationSD = (endSD - startSD)/1000000;
 
+//            Forest F2origin = instance.getOriginalF2();
+//            F2origin.printForest();
+//
+//
+//            TreeUtils.applySolution(F2origin, solver.getCurrentCuts());
+//            for (Node root : F2origin.getComponents()) {
+//                TreeUtils.removeRho(root);
+//            }
+//            List<String> newickComponents = F2origin.toNewickList();
+//
+//            String sdComponents = String.join(" ", newickComponents);
+
 
             StringBuilder sb = new StringBuilder("-----------------------------------------------------------------");
             if (trueSolution != rsprResult) {
                 sb.append(System.lineSeparator()).append("RESULT MISMATCH").append(System.lineSeparator());
-                String mismatchIdPath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\Test\\mismatch_ids.txt";
+
                 ExperimentTool.appendLineToFile(mismatchIdPath, Integer.toString(stepCounter));
             } else {
                 sb.append(System.lineSeparator()).append("SUCCESS NO MISMATCH").append(System.lineSeparator());
             }
             sb.append("Run number ").append(stepCounter).append(System.lineSeparator());
             sb.append("rspr solution: ").append(rsprResult).append(System.lineSeparator());
+            sb.append(rsprFinal3[0]).append(System.lineSeparator());
+            sb.append(rsprFinal3[1]).append(System.lineSeparator());
             sb.append("rspr completed in ").append(rsprDuration).append(" milliseconds").append(System.lineSeparator());
             sb.append("Split and Decompose solution: ").append(trueSolution).append(System.lineSeparator());
+            //sb.append(sdComponents).append(System.lineSeparator());
             sb.append("Split and Decompose completed in ").append(durationSD).append(" milliseconds").append(System.lineSeparator());
             sb.append("Split and Decompose Counters").append(System.lineSeparator());
             sb.append("split: ").append(solver.getSplitCounter()).append(System.lineSeparator());
@@ -228,75 +266,156 @@ public class SplitDecompose {
         }
     }
 
+    public static void compareConfigs(String[] args1, String[] args2, int stepCounter, String[] treeGenArgs, String[] logFileNames) {
 
-        public static void main (String[]args){
-            //File treeFile = new File(args[0]);
-            File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\trees1.txt");
+    }
 
-            try {
-                ProblemInstance pi = readProblemInstanceFromFileWithRho(treeFile);
-                pi.printTrees();
+    public static int testMain(String[] args) {
+        File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\trees1.txt");
 
-                String[] arguments = new String[2];
-                arguments[0] = "split-decompose";
-                //arguments[1] = args[1];
-                arguments[1] = "2";
+        try {
+            ProblemInstance pi = readProblemInstanceFromFileWithRho(treeFile);
+            //ProblemInstance pi = ExperimentTool.readProblemFromFile(treeFile);
+            //pi.printTrees();
 
-                Date d1 = new Date();
+            String[] arguments = new String[2];
+            arguments[0] = "split-decompose";
+            //arguments[1] = args[1];
+            arguments[1] = "2";
 
-                MAFSolver solver;
-                if (args.length == 3) {
-                    solver = new MAFSolver(pi, new Random(Integer.parseInt(args[2])), arguments);
-                } else {
-                    solver = new MAFSolver(pi, new Random(), arguments);
-                }
+            Date d1 = new Date();
 
-
-
-                for (int i = 1; i < 18; i++) {
-                    System.out.println("SEARCHING AT K = " + i);
-                    boolean works = solver.advancedSearch(i);
-
-                    if (works) {
-                        System.out.println();
-                        solver.printNumStates();
-                        System.out.println();
-                        System.out.println("---------------------------------");
-                        System.out.println("Solvable in " + i + " cuts\n\n");
-
-
-                        break;
-                    } else {
-                        System.out.println(i + " cuts not enough\n\n");
-                    }
-                }
-
-                Forest F2origin = pi.getOriginalF2();
-
-
-                TreeUtils.applySolution(F2origin, solver.getCurrentCuts());
-                for (Node root : F2origin.getComponents()) {
-                    TreeUtils.removeRho(root);
-                }
-                List<String> newickComponents = F2origin.toNewickList();
-                System.out.println();
-                System.out.println("OPT:");
-                for (String s : newickComponents) {
-                    System.out.println(s);
-                }
-
-                System.out.println("\n\n\nSplit " + solver.getSplitCounter() + " times");
-                System.out.println("Decomposed " + solver.getDecomposeCounter() + " times\n\n\n");
-
-
-                Date d2 = new Date();
-
-                System.out.println("Started at " + d1);
-                System.out.println("Finished at " + d2);
-
-
-            } catch (IOException e) {
-                e.printStackTrace();
+            MAFSolver solver;
+            if (args.length == 3) {
+                solver = new MAFSolver(pi, new Random(Integer.parseInt(args[2])), arguments);
+            } else {
+                solver = new MAFSolver(pi, new Random(), arguments);
             }
+
+
+
+            for (int i = 1; i < 18; i++) {
+                System.out.println("SEARCHING AT K = " + i);
+                boolean works = solver.advancedSearch(i);
+
+                if (works) {
+                    System.out.println();
+                    solver.printNumStates();
+                    System.out.println();
+                    System.out.println("---------------------------------");
+                    System.out.println("Solvable in " + i + " cuts\n\n");
+                    return i;
+                } else {
+                    System.out.println(i + " cuts not enough\n\n");
+                }
+            }
+
+//            Forest F2origin = pi.getOriginalF2();
+
+
+//            TreeUtils.applySolution(F2origin, solver.getCurrentCuts());
+//            for (Node root : F2origin.getComponents()) {
+//                TreeUtils.removeRho(root);
+//            }
+//            List<String> newickComponents = F2origin.toNewickList();
+//            System.out.println();
+//            System.out.println("OPT:");
+//            for (String s : newickComponents) {
+//                System.out.println(s);
+//            }
+//
+//            System.out.println("\n\n\nSplit " + solver.getSplitCounter() + " times");
+//            System.out.println("Decomposed " + solver.getDecomposeCounter() + " times\n\n\n");
+//
+//
+//            Date d2 = new Date();
+//
+//            System.out.println("Started at " + d1);
+//            System.out.println("Finished at " + d2);
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+
+    public static void main (String[] args){
+        //File treeFile = new File(args[0]);
+        File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\TREEPAIR_100_10_50_02.tree");
+
+        try {
+            ProblemInstance pi = readProblemInstanceFromFileWithRho(treeFile);
+            //ProblemInstance pi = ExperimentTool.readProblemFromFile(treeFile);
+            pi.printTrees();
+
+            String[] arguments = new String[2];
+            arguments[0] = "split-decompose";
+            //arguments[0] = args[1];
+            //arguments[1] = args[2];
+            arguments[1] = "2";
+
+
+
+
+            Date d1 = new Date();
+
+            MAFSolver solver;
+            if (args.length == 4) {
+                solver = new MAFSolver(pi, new Random(Integer.parseInt(args[3])), arguments);
+            } else {
+                solver = new MAFSolver(pi, new Random(), arguments);
+            }
+
+
+
+            for (int i = 1; i < 25; i++) {
+                System.out.println("SEARCHING AT K = " + i);
+                System.out.println("Configuration: " + arguments[0]);
+                boolean works = solver.advancedSearch(i);
+
+                if (works) {
+                    System.out.println();
+                    solver.printNumStates();
+                    System.out.println();
+                    System.out.println("---------------------------------");
+                    System.out.println("Solvable in " + i + " cuts\n\n");
+
+
+                    break;
+                } else {
+                    solver.printNumStates();
+                    System.out.println(i + " cuts not enough\n\n");
+                }
+            }
+
+            Forest F2origin = pi.getOriginalF2();
+
+
+            TreeUtils.applySolution(F2origin, solver.getCurrentCuts());
+            for (Node root : F2origin.getComponents()) {
+                TreeUtils.removeRho(root);
+            }
+            List<String> newickComponents = F2origin.toNewickList();
+            System.out.println();
+            System.out.println("OPT:");
+            for (String s : newickComponents) {
+                System.out.println(s);
+            }
+
+            System.out.println("\n\n\nSplit " + solver.getSplitCounter() + " times");
+            System.out.println("Decomposed " + solver.getDecomposeCounter() + " times\n\n\n");
+
+
+            Date d2 = new Date();
+
+            System.out.println("Started at " + d1);
+            System.out.println("Finished at " + d2);
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
+}
