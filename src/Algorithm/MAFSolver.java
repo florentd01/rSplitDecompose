@@ -942,6 +942,7 @@ public class MAFSolver {
         arguments[1] = "2";
 
         ProblemInstance instance = new ProblemInstance(F1, F2);
+        instance.printTrees();
 
         System.out.println("Random Seed : " + 217);
 

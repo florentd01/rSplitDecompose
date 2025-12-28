@@ -87,7 +87,7 @@ public class SplitTool {
     /**
      * recursive Method that takes in 2 sets of leaf labels from a component in F that were separated by edge in T
      * assigned to different component and return a splitting core (list of conflicts)
-     * TODO: method does cuts on a copy of the tree allows it to modify it, need to link nodes in copy to original
+     *
      *
      *
      * @param root        the root node of the tree
@@ -130,7 +130,7 @@ public class SplitTool {
 
     }
 
-    //TODO: method that checks if the two pieces are separated
+    // method that checks if the two pieces are separated
     public boolean areSeparatedAtRoot(SplitTreeNode root, List<Set<String>> leafSets) {
 
         Set<String> target = root.getDescendantLabels();
