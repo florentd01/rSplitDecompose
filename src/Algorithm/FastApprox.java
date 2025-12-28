@@ -4,6 +4,7 @@ import Model.Cherry;
 import Model.Forest;
 import Model.Node;
 import Model.ProblemInstance;
+import utils.TreeUtils;
 import utils.UndoMachine;
 
 import java.util.ArrayList;
@@ -14,6 +15,12 @@ public class FastApprox {
 
     Random randomizer;
 
+    public FastApprox(Random randomizer) {
+        this.randomizer = randomizer;
+    }
+
+
+
     public int fastApprox(int cuts, ProblemInstance pI){
         //pI.printTrees();
         if (pI.getF1().getLeavesByLabel().size() <= 2) {
@@ -22,7 +29,9 @@ public class FastApprox {
             List<Node> cutChildren = approxCutChildren(pI);
             for (Node child : cutChildren) {
                 Node parent = child.getParent();
-                Algorithm.ApproxCut cut = new Algorithm.ApproxCut(child.getParent(), child, pI.getF2());
+
+                ApproxCut cut = new ApproxCut(child.getParent(), child, pI.getF2());
+
                 cut.makeCut();
                 cuts++;
 //                System.out.println("After Cut before Norm");
@@ -35,6 +44,7 @@ public class FastApprox {
                 Forest.removeEmptyInternalNodes(component);
             }
             approxNormalizeTree(new UndoMachine(), pI);
+
 //            System.out.println("CUTS DONE");
 //            pI.printTrees();
 
@@ -298,6 +308,30 @@ public class FastApprox {
 
         public int getIndexInChildrenList() {
             return indexInChildrenList;
+        }
+    }
+
+    public static void main(String[] args) {
+        for (int i = 0; i < 1000000; i++) {
+            Forest F1 = Forest.readNewickFormat("((((1,2),(3,4)),((5,6),(7,8))),(((9,10),(11,12)),((13,14),(15,16))))");
+            Forest F2 = Forest.readNewickFormat("(((7,8),((1,(2,(14,5))),(3,4))),(((11,(6,12)),10),((13,(15,16)),9)))");
+
+            TreeUtils.linkSiblings(F1);
+            TreeUtils.linkSiblings(F2);
+
+            TreeUtils.linkForests(F1, F2);
+
+            ProblemInstance pI = new ProblemInstance(F1, F2);
+            //pI.printTrees();
+            FastApprox test = new FastApprox(new Random(i));
+
+            test.approxNormalizeTree(new UndoMachine(), pI);
+            int approxVal = test.fastApprox(0, pI);
+            System.out.println(approxVal);
+            if (approxVal > 12) {
+                System.out.println("BIG PROBLEM DETECTED at i = " + i);
+                break;
+            }
         }
     }
 }
