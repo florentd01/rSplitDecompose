@@ -7,10 +7,10 @@ import Model.ProblemInstance;
 
 
 import java.io.*;
-import java.net.URISyntaxException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.SQLSyntaxErrorException;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 
 public class ExperimentTool {
@@ -403,7 +403,7 @@ public class ExperimentTool {
 
         if (txtFilePath != null) {
             try {
-                Files.writeString(Path.of(txtFilePath), treePair);
+                Files.writeString(Path.of(txtFilePath), treePair, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -457,9 +457,9 @@ public class ExperimentTool {
     public static void testTreeGen() {
         String[] filePaths = {"C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\RandomTree.jar",
                 "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\RandomRSPR.jar"};
-        String txtPath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\trees1.txt";
+        String txtPath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\treesLARGE.txt";
 
-        generateTreePair("50", "0", "50", "10", filePaths, txtPath);
+        generateTreePair("500", "0", "50", "70", filePaths, txtPath);
     }
 
     public static void RSPRWithTreeGen() throws Exception {
@@ -534,6 +534,8 @@ public class ExperimentTool {
         return -1;
     }
 
+
+
     public static String[] getLastThreeLines(String text) {
         if (text == null || text.isEmpty()) {
             return new String[0]; // no lines
@@ -567,6 +569,54 @@ public class ExperimentTool {
         }
     }
 
+    public static List<String> readFileInPairs(Path filePath) throws IOException {
+        List<String> lines = Files.readAllLines(filePath);
+        List<String> result = new ArrayList<>();
+
+        for (int i = 0; i < lines.size(); i += 2) {
+            String first = lines.get(i);
+            String second = (i + 1 < lines.size()) ? lines.get(i + 1) : "";
+
+            result.add(first + System.lineSeparator() + second);
+        }
+
+        return result;
+    }
+
+    public static void testReadTreePairsFromLargeFile() throws IOException {
+        String path = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated\\trees_100_16";
+
+        List<String> ls = readFileInPairs(Path.of(path));
+
+        System.out.println("Size: "+ ls.size());
+        for (String tree : ls) {
+            System.out.println("Printing treepair");
+            System.out.println(tree);
+        }
+
+    }
+    public static void generateTreeSet(String[] randOp) {
+        String[] treeFilePaths = {"C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\RandomTree.jar",
+                "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\RandomRSPR.jar"};
+        String[] treeGenArgs = new String[] {"300", "0", "50", "-1"};
+        //String[] randOp = new String[] {"10", "11", "12", "13", "17", "18"};
+        List<String> randomOperations = new ArrayList<>(List.of(randOp));
+        for (String opCount : randomOperations) {
+            treeGenArgs[3] = opCount;
+            for (int i = 0; i < 300; i++) {
+                String filePath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated\\trees_100_" + opCount;
+                String treesString = ExperimentTool.generateTreePair(treeGenArgs[0], treeGenArgs[1], treeGenArgs[2], treeGenArgs[3], treeFilePaths, filePath);
+                System.out.println("Trees:");
+                System.out.println(treesString);
+
+            }
+        }
+    }
+
+
+
+
+
     public static void test1() throws Exception {
         String trees = Files.readString(Path.of("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\trees_100_17.txt"));
 
@@ -585,13 +635,246 @@ public class ExperimentTool {
     }
 
 
+    public static ProblemInstance problemInstanceWithRhoFromTreeStringArray(String[] trees) {
+        String line1 = trees[0];
+        String line2 = trees[1];
+
+
+        //"(+(((1,2),(3,4)),((5,6),(7,8)))+,rho)"
+        line1 = "(" + line1 + ",rho)";
+
+        line2 = "(" + line2 + ",rho)";
+
+        Forest T1 = Forest.readNewickFormat(line1);
+        Forest F2 = Forest.readNewickFormat(line2);
+
+        TreeUtils.linkForests(T1, F2);
+        TreeUtils.linkSiblings(T1);
+        TreeUtils.linkSiblings(F2);
+
+        return new ProblemInstance(T1, F2);
+    }
+
+
+    public static ProblemInstance problemInstanceFromTreeStringArray(String[] trees) {
+        String line1 = trees[0];
+        String line2 = trees[1];
+
+
+        Forest T1 = Forest.readNewickFormat(line1);
+        Forest F2 = Forest.readNewickFormat(line2);
+
+        TreeUtils.linkForests(T1, F2);
+        TreeUtils.linkSiblings(T1);
+        TreeUtils.linkSiblings(F2);
+
+        return new ProblemInstance(T1, F2);
+    }
+
+    public static void reassignTrees(String string) throws IOException {
+        String path = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated\\trees_100_" + string;
+
+        List<String> ls = readFileInPairs(Path.of(path));
+
+        String[] args = new String[] {"decompose", "2", "approx", "no"};
+
+        int counter = 0;
+        for (String trees : ls) {
+
+            if (counter == 1000) {
+                break;
+            }
+            ProblemInstance pI = ExperimentTool.problemInstanceWithRhoFromTreeStringArray(trees.split("\\r?\\n"));
+            DataTracker dt = new DataTracker("", "decompose");
+            MAFSolver solver = new MAFSolver(pI, new Random(), args, dt);
+            int trueSolution = -1;
+            for (int i = 0; i < 41; i++) {
+                boolean works = solver.advancedSearch(i);
+
+                if (works) {
+                    solver.printNumStates();
+                    System.out.println("---------------------------------");
+                    System.out.println("Solvable in " + i + " cuts\n\n");
+
+                    trueSolution = i;
+
+
+                    try {
+                        String txtFilePath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated_final\\trees_100_" + i;
+                        Files.writeString(Path.of(txtFilePath), trees + System.lineSeparator(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+
+
+                    break;
+                } else {
+                    System.out.println(i + " cuts not enough");
+                }
+
+            }
+
+            counter++;
+
+        }
+
+    }
+
+
+    public static List<String> removeDuplicates(List<String> input) {
+        List<String> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        for (String s : input) {
+            if (seen.add(s)) { // add() returns false if already present
+                result.add(s);
+            }
+        }
+
+        return result;
+    }
+
+    public static void writeLinesToFile(List<String> lines, Path filePath) throws IOException {
+        Files.write(filePath, lines);
+    }
+
+    public static void fixDuplicates() {
+        String destPath = "C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated_final_final\\";
+       // String sourcePath = ""
+    }
+
+    public static void processDirectoryFiles() throws IOException {
+        Path inputDir = Path.of("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated_final");
+        Path outputDir = Path.of("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated_final_final");
+        if (!Files.isDirectory(inputDir)) {
+            throw new IllegalArgumentException("Input path is not a directory");
+        }
+
+        Files.createDirectories(outputDir);
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(inputDir)) {
+            for (Path file : stream) {
+
+                // Skip directories
+                if (!Files.isRegularFile(file)) {
+                    continue;
+                }
+
+                // 1. Read file in pairs
+                List<String> lines = Files.readAllLines(file);
+                List<String> unique = getStrings(lines);
+
+                // 3. Build output filename (append "_final")
+                String originalName = file.getFileName().toString();
+                Path outputFile = outputDir.resolve(originalName + "_final");
+
+                // 4. Write result to file
+                Files.write(outputFile, unique);
+            }
+        }
+    }
+
+    private static List<String> getStrings(List<String> lines) {
+        List<String> pairedLines = new ArrayList<>();
+
+        for (int i = 0; i < lines.size(); i += 2) {
+            String first = lines.get(i);
+            String second = (i + 1 < lines.size()) ? lines.get(i + 1) : "";
+            pairedLines.add(first + System.lineSeparator() + second);
+        }
+
+        // 2. Remove duplicates (manual loop, preserve order)
+        List<String> unique = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        for (String entry : pairedLines) {
+            if (seen.add(entry)) {
+                unique.add(entry);
+            }
+        }
+        return unique;
+    }
+
+    public static void validateTrees() throws IOException {
+        Path inputDir = Path.of("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\generated_final_final");
+
+        if (!Files.isDirectory(inputDir)) {
+            throw new IllegalArgumentException("Input path is not a directory");
+        }
+
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(inputDir)) {
+            int counter = 0;
+            String[] args = new String[] {"decompose", "2", "approx"};
+            for (Path file : stream) {
+                List<String> lines = Files.readAllLines(file);
+                List<String> unique = getStrings(lines);
+
+                for (String trees : unique) {
+                    ProblemInstance pI = ExperimentTool.problemInstanceWithRhoFromTreeStringArray(trees.split("\\r?\\n"));
+                    DataTracker dt = new DataTracker("", "decompose");
+                    MAFSolver solver = new MAFSolver(pI, new Random(), args, dt);
+                    int trueSolution = -1;
+                    for (int i = 5; i < 41; i++) {
+                        boolean works = solver.advancedSearch(i);
+
+                        if (works) {
+                            solver.printNumStates();
+                            System.out.println("---------------------------------");
+                            System.out.println("Solvable in " + i + " cuts\n\n");
+
+                            if (i != counter) {
+                                System.out.println("Problem in file with " + counter + " rspr operations");
+                                System.out.println(trees);
+                                System.out.println("true sol = " + i);
+                                throw new RuntimeException();
+                            }
+                            counter++;
+
+
+
+                            break;
+                        } else {
+                            System.out.println(i + " cuts not enough");
+                        }
+
+                    }
+
+
+                }
+                counter++;
+            }
+
+        }
+    }
+
+
+
+
+
+
 
     public static void main(String[] args) throws Exception {
         //testRandomRSPR();
         //testTreeGen();
         //RSPRWithTreeGen();
-        test1();
+        //test1();
 
+
+        String[] randOp = new String[] {"2", "3", "4", "5", "6", "7", "8", "9"};
+        //generateTreeSet(randOp);
+
+        //String[] randOp = new String[] {"10", "11", "12", "13", "17", "18"};
+        for (String count : randOp) {
+            reassignTrees(count);
+        }
+//        testReadTreePairsFromLargeFile();
+//        for (int i = 14; i <17; i+=1) {
+//            ;
+//        }
+
+        //processDirectoryFiles();
+        //validateTrees();
 //        String inputLines = "((((1,2),(3,4)),((5,6),(7,8))),(((9,10),(11,12)),((13,14),(15,16))));\n" +
 //                "(((7,8),((1,(2,(14,5))),(3,4))),(((11,(6,12)),10),((13,(15,16)),9)));";
 //        String[] argumentsRSPR = new String[] {"-fpt", "-q"};

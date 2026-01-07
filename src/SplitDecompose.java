@@ -2,6 +2,7 @@ import Algorithm.MAFSolver;
 import Model.Forest;
 import Model.Node;
 import Model.ProblemInstance;
+import utils.DataTracker;
 import utils.ExperimentTool;
 import utils.TreeUtils;
 
@@ -15,41 +16,7 @@ import static utils.ExperimentTool.*;
 
 public class SplitDecompose {
 
-    public static ProblemInstance problemInstanceWithRhoFromTreeStringArray(String[] trees) {
-        String line1 = trees[0];
-        String line2 = trees[1];
 
-
-        //"(+(((1,2),(3,4)),((5,6),(7,8)))+,rho)"
-        line1 = "(" + line1 + ",rho)";
-
-        line2 = "(" + line2 + ",rho)";
-
-        Forest T1 = Forest.readNewickFormat(line1);
-        Forest F2 = Forest.readNewickFormat(line2);
-
-        TreeUtils.linkForests(T1, F2);
-        TreeUtils.linkSiblings(T1);
-        TreeUtils.linkSiblings(F2);
-
-        return new ProblemInstance(T1, F2);
-    }
-
-
-    public static ProblemInstance problemInstanceFromTreeStringArray(String[] trees) {
-        String line1 = trees[0];
-        String line2 = trees[1];
-
-
-        Forest T1 = Forest.readNewickFormat(line1);
-        Forest F2 = Forest.readNewickFormat(line2);
-
-        TreeUtils.linkForests(T1, F2);
-        TreeUtils.linkSiblings(T1);
-        TreeUtils.linkSiblings(F2);
-
-        return new ProblemInstance(T1, F2);
-    }
 
     public static void SplitDecomposeOnDB() throws IOException {
         File dir = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\kernelizing_agreement_forests_data\\maindataset");
@@ -343,34 +310,32 @@ public class SplitDecompose {
 
     public static void main (String[] args){
         //File treeFile = new File(args[0]);
-        File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\TREEPAIR_100_10_50_02.tree");
+        //File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\trees_100_17.txt");
+        //File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\treesLARGE.txt");
+        File treeFile = new File ("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\tree_2_test.txt");
 
         try {
             ProblemInstance pi = readProblemInstanceFromFileWithRho(treeFile);
             //ProblemInstance pi = ExperimentTool.readProblemFromFile(treeFile);
             pi.printTrees();
 
-            String[] arguments = new String[2];
-            arguments[0] = "split-decompose";
-            //arguments[0] = args[1];
-            //arguments[1] = args[2];
-            arguments[1] = "2";
+            String[] arguments = new String[] {"default", "2", "approx", "whidden-trick"};
+//            arguments[0] = "split-decompose";
+//            //arguments[0] = args[1];
+//            //arguments[1] = args[2];
+//            arguments[1] = "2";
 
 
 
 
             Date d1 = new Date();
 
-            MAFSolver solver;
-            if (args.length == 4) {
-                solver = new MAFSolver(pi, new Random(Integer.parseInt(args[3])), arguments);
-            } else {
-                solver = new MAFSolver(pi, new Random(), arguments);
-            }
+            MAFSolver solver = new MAFSolver(pi, new Random(), arguments, new DataTracker("", ""));
 
 
 
-            for (int i = 1; i < 25; i++) {
+
+            for (int i = 1; i < 71; i++) {
                 System.out.println("SEARCHING AT K = " + i);
                 System.out.println("Configuration: " + arguments[0]);
                 boolean works = solver.advancedSearch(i);

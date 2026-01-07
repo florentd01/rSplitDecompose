@@ -28,6 +28,8 @@ public class MAFSolver {
     public DataTracker dt;
 
     private boolean trackData;
+    private boolean useFastApprox;
+    private boolean useWhiddemTrick;
 
 
 
@@ -47,6 +49,9 @@ public class MAFSolver {
         this.problemInstance = problemInstance;
         this.args = args;
         this.trackData = false;
+        if (Objects.equals(args[args.length - 1], "approx")) {
+            this.useFastApprox = true;
+        }
         //System.out.println(Arrays.toString(args));
     }
 
@@ -57,7 +62,32 @@ public class MAFSolver {
         //System.out.println(Arrays.toString(args));
         this.dt = dt;
         this.trackData = true;
+        if (Objects.equals(args[2], "approx")) {
+            this.useFastApprox = true;
+        }
+        if (Objects.equals(args[3], "whidden-trick")) {
+            this.useWhiddemTrick = true;
+        }
     }
+
+    public MAFSolver(ProblemInstance problemInstance, Random randomizer, String[] args, DataTracker dt, boolean useWhiddemTrick) {
+        this.randomizer = randomizer;
+        this.problemInstance = problemInstance;
+        this.args = args;
+        //System.out.println(Arrays.toString(args));
+        this.dt = dt;
+        this.trackData = true;
+        if (Objects.equals(args[2], "approx")) {
+            this.useFastApprox = true;
+        }
+        if (Objects.equals(args[3], "whidden-trick")) {
+            this.useWhiddemTrick = true;
+        }
+        //this.useWhiddemTrick = useWhiddemTrick;
+    }
+
+
+
 
     public Random getRandomizer() {
         return randomizer;
@@ -82,7 +112,6 @@ public class MAFSolver {
     public boolean search(int k) {
         normalizeTree(new UndoMachine());
         //problemInstance.printTrees();
-
         return searchHelperV2(k);
     }
 
@@ -124,12 +153,20 @@ public class MAFSolver {
         //        if (k%100 == 0) {
 //            System.out.println("searching at k = " + k);
 //        }
+        for (Node component : problemInstance.getF2().getComponents()) {
 
+            if (!TreeUtils.validateSiblingRelation(component)){
+                System.out.println("Break bad siblings in approx before cut");
+            }
+        }
         numStates++;
 //        if (k == 3) {
 //            System.out.println("breakpoint");
 //            problemInstance.printTrees();
 //        }
+        if (trackData) {
+            dt.statesExplored++;
+        }
         if (k < 0) {
             if (trackData) {
                 dt.failedBranchCount++;
@@ -138,6 +175,25 @@ public class MAFSolver {
         } else if (problemInstance.getF1().getLeavesByLabel().size() <= 2) {
             return true;
         } else {
+            if (useFastApprox) {
+                FastApprox approxMachine = new FastApprox(new Random(1));
+//                for (Node component : problemInstance.getF2().getComponents()) {
+//
+//                    if (!TreeUtils.validateSiblingRelation(component)){
+//                        System.out.println("Break bad siblings in approx before cut");
+//                    }
+//                }
+                if (approxMachine.testsFastApprox(new ProblemInstance(problemInstance)) / 3 > k) {
+                    //System.out.println("Stop search do to lower bound from 3-approx");
+                    if (trackData) {
+                        dt.failedBranchCount++;
+                    }
+
+                    return false;
+                }
+            }
+
+
             List<Conflict> conflicts;
             if (problemInstance.getF2().getComponents().size() > 1) {
                 FitchTool disjointChecker = new FitchTool(problemInstance);
@@ -230,13 +286,16 @@ public class MAFSolver {
             }
             return isPossible;
         }
-
     }
 
     public boolean searchOnlySplit(int k) {
         //        if (k%100 == 0) {
 //            System.out.println("searching at k = " + k);
 //        }
+
+        if (trackData) {
+            dt.statesExplored++;
+        }
 
         numStates++;
 //        if (k == 3) {
@@ -251,6 +310,13 @@ public class MAFSolver {
         } else if (problemInstance.getF1().getLeavesByLabel().size() <= 2) {
             return true;
         } else {
+            if (useFastApprox) {
+                FastApprox approxMachine = new FastApprox(new Random());
+                if (approxMachine.fastApprox(0, new ProblemInstance(problemInstance)) / 3 > k) {
+                    dt.failedBranchCount++;
+                    return false;
+                }
+            }
             List<Conflict> conflicts;
             if (problemInstance.getF2().getComponents().size() > 1) {
                 FitchTool disjointChecker = new FitchTool(problemInstance);
@@ -349,6 +415,10 @@ public class MAFSolver {
 //            System.out.println("breakpoint");
 //            problemInstance.printTrees();
 //        }
+
+        if (trackData) {
+            dt.statesExplored++;
+        }
         if (k < 0) {
             if (trackData) {
                 dt.failedBranchCount++;
@@ -357,6 +427,13 @@ public class MAFSolver {
         } else if (problemInstance.getF1().getLeavesByLabel().size() <= 2) {
             return true;
         } else {
+            if (useFastApprox) {
+                FastApprox approxMachine = new FastApprox(new Random());
+                if (approxMachine.fastApprox(0, new ProblemInstance(problemInstance)) / 3 > k) {
+                    dt.failedBranchCount++;
+                    return false;
+                }
+            }
             boolean isPossible = false;
             List<Cherry> cherries = findCherries();
             if (randomizer == null) {
@@ -445,6 +522,13 @@ public class MAFSolver {
         } else if (problemInstance.getF1().getLeavesByLabel().size() <= 2) {
             return true;
         } else {
+            if (useFastApprox) {
+                FastApprox approxMachine = new FastApprox(new Random());
+                if (approxMachine.fastApprox(0, new ProblemInstance(problemInstance)) / 3 > k) {
+                    dt.failedBranchCount++;
+                    return false;
+                }
+            }
             List<Conflict> conflicts;
             if (problemInstance.getF2().getComponents().size() > 1) {
                 FitchTool disjointChecker = new FitchTool(problemInstance);
@@ -697,7 +781,12 @@ public class MAFSolver {
         bInF2.setDepth(depthB);
 
         if (tempA.equals(tempB)){
-            conflictList.addAll(findCutsSameComponent(aInF2, bInF2));
+            if (!useWhiddemTrick) {
+                conflictList.addAll(findCutsSameComponentNoWhidden(aInF2, bInF2));
+            } else {
+                conflictList.addAll(findCutsSameComponent(aInF2, bInF2));
+            }
+
         } else {
             conflictList.addAll(findCutDifferentComponents(aInF2, bInF2));
         }
@@ -767,6 +856,65 @@ public class MAFSolver {
             conflicts.add(conflictA);
             conflicts.add(conflictB);
         }
+
+        conflicts.add(conflictMiddle);
+
+
+
+
+
+        return conflicts;
+    }
+
+    public List<Conflict> findCutsSameComponentNoWhidden(Node a, Node b) {
+        List<Conflict> conflicts = new ArrayList<>();
+        if (a == null || b == null) {
+            return conflicts;
+        }
+
+        int da = a.getDepth(), db = b.getDepth();
+        int diff = da - db;
+        if (diff < 0) {
+            Node temp = a;
+            a = b;
+            b = temp;
+            diff = -diff;
+        }
+
+        Conflict conflictA = new Conflict(a, b);
+        conflictA.addCut(new Cut(a.getParent(), a, problemInstance.getF2(), a.getParent().getChildren().indexOf(a)));
+
+        Conflict conflictB = new Conflict(a, b);
+        conflictB.addCut(new Cut(b.getParent(), b, problemInstance.getF2(), b.getParent().getChildren().indexOf(b)));
+
+        Conflict conflictMiddle = new Conflict(a, b);
+        while (diff-- != 0) {
+            Cut cut = new Cut(a.getParent(), a.getSibling(), problemInstance.getF2(), a.getParent().getChildren().indexOf(a.getSibling()));
+            a = a.getParent();
+            conflictMiddle.addCut(cut);
+        }
+
+        while (a != null && b != null) {
+            if (a == b) break;
+            if (a.getParent() == b.getParent()) {
+                break;
+            } else {
+                if (a.getParent() == null || b.getParent() == null) {
+                    System.out.println("BIG PROBLEM DETECTED");
+                }
+                Cut aCut = new Cut(a.getParent(), a.getSibling(), problemInstance.getF2(), a.getParent().getChildren().indexOf(a.getSibling()));
+                Cut bCut = new Cut(b.getParent(), b.getSibling(), problemInstance.getF2(), b.getParent().getChildren().indexOf(b.getSibling()));
+                conflictMiddle.addCut(aCut);
+                conflictMiddle.addCut(bCut);
+
+                a = a.getParent();
+                b = b.getParent();
+            }
+        }
+
+        conflicts.add(conflictA);
+        conflicts.add(conflictB);
+
 
         conflicts.add(conflictMiddle);
 
@@ -937,9 +1085,8 @@ public class MAFSolver {
 
         //ProblemInstance pi = new ProblemInstance(F1, F2);
 
-        String[] arguments = new String[2];
-        arguments[0] = "decompose";
-        arguments[1] = "2";
+        String[] arguments = new String[] {"default", "2", "no-approx", "no-whidden-trick"};
+
 
         ProblemInstance instance = new ProblemInstance(F1, F2);
         instance.printTrees();

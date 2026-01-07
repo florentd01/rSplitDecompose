@@ -75,16 +75,19 @@ public class TreeUtils {
     }
 
     public static void linkSiblings(Forest F) {
-        Node root = F.getComponent(0);
-        if (root == null) return;
+        for (Node root : F.getComponents()) {
+            if (root == null) return;
 
-        // Root has no sibling
-        root.setSibling(null);
+            // Root has no sibling
+            root.setSibling(null);
 
-        // Traverse all nodes (DFS or BFS both work)
-        for (Node child : root.getChildren()) {
-            assignSiblingsHelper(child);
+            // Traverse all nodes (DFS or BFS both work)
+            for (Node child : root.getChildren()) {
+                assignSiblingsHelper(child);
+            }
         }
+
+
     }
 
     private static void assignSiblingsHelper(Node node) {
@@ -110,6 +113,64 @@ public class TreeUtils {
         for (Node child : node.getChildren()) {
             assignSiblingsHelper(child);
         }
+    }
+
+    public static boolean validateSiblingRelation(Node root) {
+        if (root == null) {
+            return true;
+        } else {
+            return validateSiblingRelationsRecursive(root);
+        }
+    }
+
+    private static boolean validateSiblingRelationsRecursive(Node node) {
+        List<Node> children = node.getChildren();
+
+        // If internal node, check sibling consistency
+        if (children.size() == 2) {
+            Node c1 = children.get(0);
+            Node c2 = children.get(1);
+
+            // Check sibling pointers
+            if (c1.getSibling() != c2) {
+                System.out.println("failed at node:");
+                System.out.println(c1);
+                if (c1.getLabel()!=null) {
+                    System.out.println(c1.getLabel());
+                }
+                return false;
+            }
+            if (c2.getSibling() != c1) {
+                System.out.println("failed at node:");
+                System.out.println(c2);
+                if (c2.getLabel()!=null) {
+                    System.out.println(c2.getLabel());
+                }
+                return false;
+            }
+
+            // Check parent pointers (optional but good sanity check)
+//            if (c1.getParent() != node) return false;
+//            if (c2.getParent() != node) return false;
+        }
+
+        // If unary or leaf, sibling should be null
+//        if (children.size() < 2) {
+//            if (node.getSibling() != null && node.getParent() != null) {
+//                return false;
+//            }
+//        }
+
+        // Recurse
+        for (Node child : children) {
+            if (!child.isLeaf()) {
+                if (!validateSiblingRelationsRecursive(child)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public static boolean checkDescendantRelations(Forest F) {

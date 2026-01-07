@@ -30,10 +30,17 @@ public class ProblemInstance {
         TreeUtils.linkSiblings(T1);
         TreeUtils.linkSiblings(F2);
         TreeUtils.linkForests(T1, F2);
+//        for (Node component : F2.getComponents()) {
+//
+//            if (!TreeUtils.validateSiblingRelation(component)){
+//                System.out.println("Break bad siblings in approx before cut");
+//            }
+//        }
 
         this.F1 = T1;
         this.F2 = F2;
         this.originalF2 = null;
+        //this.printTrees();
 
 
     }

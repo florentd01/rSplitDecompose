@@ -29,40 +29,127 @@ public class DataTracker {
 
     public DataTracker(String logFilePath, String algType){
         this.logFilePath = logFilePath;
+        this.algType = algType;
     }
 
     public void printToConsole() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
-        sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
-        sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
-        sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator()).append(System.lineSeparator());
+        sb.append("Total states explored: ").append(statesExplored).append(System.lineSeparator());
+        sb.append("Failed branch count: ").append(failedBranchCount).append(System.lineSeparator()).append(System.lineSeparator());
+        switch (algType) {
+            case "split-decompose":
+                sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
+                sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
+                sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
+                sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
+                sb.append("Average time searching for splitting cores: ").append(longAverage(splittingCoreSearchTimes)).append(System.lineSeparator()).append(System.lineSeparator());
 
-        sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
-        sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes)).append(System.lineSeparator());
-        sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator()).append(System.lineSeparator());
 
-        sb.append("Times splitting lead to decompose: ").append(decomposeAfterSplitCounter).append(System.lineSeparator());
-        sb.append("Proportion of times splitting lead to decompose: ").append((double) decomposeAfterSplitCounter/splitCounter).append(System.lineSeparator());
-        System.out.println(sb.toString());
+                sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
+                sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
+                sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
+
+                sb.append("Times splitting lead to decompose: ").append(decomposeAfterSplitCounter);
+                sb.append("Proportion of times splitting lead to decompose: ").append((double) decomposeAfterSplitCounter/splitCounter).append(System.lineSeparator());
+                break;
+            case "split":
+                sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
+                sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
+                sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
+                sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
+                sb.append("Average time searching for splitting cores: ").append(longAverage(splittingCoreSearchTimes)).append(System.lineSeparator()).append(System.lineSeparator());
+
+                break;
+            case "decompose":
+                sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
+                sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
+                sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
+                break;
+            default:
+                //do nothing
+                break;
+
+        }
+        System.out.println(sb);
+    }
+
+    public String getResultString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Total states explored: ").append(statesExplored).append(System.lineSeparator());
+        sb.append("Failed branch count: ").append(failedBranchCount).append(System.lineSeparator()).append(System.lineSeparator());
+        switch (algType) {
+            case "split-decompose":
+                sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
+                sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
+                sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
+                sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
+                sb.append("Average time searching for splitting cores: ").append(longAverage(splittingCoreSearchTimes)).append(System.lineSeparator()).append(System.lineSeparator());
+
+
+                sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
+                sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
+                sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
+
+                sb.append("Times splitting lead to decompose: ").append(decomposeAfterSplitCounter);
+                sb.append("Proportion of times splitting lead to decompose: ").append((double) decomposeAfterSplitCounter/splitCounter).append(System.lineSeparator());
+                break;
+            case "split":
+                sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
+                sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
+                sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
+                sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
+                sb.append("Average time searching for splitting cores: ").append(longAverage(splittingCoreSearchTimes)).append(System.lineSeparator()).append(System.lineSeparator());
+                break;
+            case "decompose":
+                sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
+                sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
+                sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
+                break;
+            default:
+                //do nothing
+                break;
+        }
+       return sb.toString();
     }
 
     public void printToLogs() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
-        sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
-        sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
-        sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
-
-        sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
-        sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
-        sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
-
-        sb.append("Times splitting lead to decompose: ").append(decomposeAfterSplitCounter);
-        sb.append("Proportion of times splitting lead to decompose: ").append((double) decomposeAfterSplitCounter/splitCounter).append(System.lineSeparator());
+        sb.append("Total states explored: ").append(statesExplored).append(System.lineSeparator());
+        sb.append("Failed branch count: ").append(failedBranchCount).append(System.lineSeparator()).append(System.lineSeparator());
+        switch (algType) {
+            case "split-decompose":
+                sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
+                sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
+                sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
+                sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
+                sb.append("Average time searching for splitting cores: ").append(longAverage(splittingCoreSearchTimes)).append(System.lineSeparator()).append(System.lineSeparator());
 
 
+                sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
+                sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
+                sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
 
+                sb.append("Times splitting lead to decompose: ").append(decomposeAfterSplitCounter);
+                sb.append("Proportion of times splitting lead to decompose: ").append((double) decomposeAfterSplitCounter/splitCounter).append(System.lineSeparator());
+                break;
+            case "split":
+                sb.append("Times split: ").append(splitCounter).append(System.lineSeparator());
+                sb.append("Total time spent splitting: ").append(sumSafe(splitTimes)).append(System.lineSeparator());
+                sb.append("Average timeToSplit: ").append(average(splitTimes)).append(System.lineSeparator());
+                sb.append("Average splitting core size: ").append(longAverage(splittingCoreSizes)).append(System.lineSeparator());
+                sb.append("Average time searching for splitting cores: ").append(longAverage(splittingCoreSearchTimes)).append(System.lineSeparator()).append(System.lineSeparator());
+
+                break;
+            case "decompose":
+                sb.append("Times decomposed: ").append(decomposeCounter).append(System.lineSeparator());
+                sb.append("Total time spent decomposing: ").append(sumSafe(decomposeTimes));
+                sb.append("Average decompose time: ").append(average(decomposeTimes)).append(System.lineSeparator());
+                break;
+            default:
+                //do nothing
+                break;
+
+        }
         ExperimentTool.appendLineToFile(logFilePath, sb.toString());
 
     }

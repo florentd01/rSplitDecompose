@@ -91,6 +91,13 @@ public class Forest {
         components.add(pos, root);
     }
 
+
+    public void removeEmptyInternalNodes() {
+        for (Node root : components) {
+            removeEmptyInternalNodesHelper(root);
+        }
+    }
+
     /**
      * Removes all internal nodes (isLeaf == false) that have no children.
      * Traverses the tree recursively and cleans up in place.
@@ -291,10 +298,20 @@ public class Forest {
 //        return node;
 //    }
 
+    public boolean reduceCommonCherriesV2(UndoMachine um) {
+        boolean didReduce = false;
+
+
+
+        return didReduce;
+    }
+
     public boolean reduceCommonCherries(Forest pairedForest, UndoMachine um) {
         boolean didReduce = false;
         List<String> removedNodes = new ArrayList<>();
         Set<Node> exploredNodes = new HashSet<>();
+        int i = 0;
+
         for (Node leaf : leavesByLabel.values()) {
             if (!exploredNodes.contains(leaf)) {
                 Node parent = leaf.getParent();
@@ -309,6 +326,7 @@ public class Forest {
                     }
                 }
             }
+            i++;
         }
         for (String label : removedNodes) {
             this.leavesByLabel.remove(label);
@@ -440,6 +458,9 @@ public class Forest {
             System.out.println("F2");
             TreeUtils.printAsciiTree(this.getComponent(0));
             TreeUtils.printAsciiTree(this.getComponent(1));
+        }
+        if (leaf.getSibling() == null) {
+            System.out.println("break in reduce cherries");
         }
         if (leaf.getSibling().isLeaf() && leaf.getTwin().getSibling().isLeaf()) {
             return Objects.equals(leaf.getSibling().getLabel(), leaf.getTwin().getSibling().getLabel());
