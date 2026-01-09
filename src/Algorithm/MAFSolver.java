@@ -157,20 +157,7 @@ public class MAFSolver {
 
 
     public boolean searchOnlyDecompose(int k, int t) {
-        //        if (k%100 == 0) {
-//            System.out.println("searching at k = " + k);
-//        }
-        for (Node component : problemInstance.getF2().getComponents()) {
-
-            if (!TreeUtils.validateSiblingRelation(component)){
-                System.out.println("Break bad siblings in approx before cut");
-            }
-        }
         numStates++;
-//        if (k == 3) {
-//            System.out.println("breakpoint");
-//            problemInstance.printTrees();
-//        }
         if (trackData) {
             dt.statesExplored++;
         }
@@ -184,67 +171,79 @@ public class MAFSolver {
         } else {
             if (useFastApprox) {
                 FastApprox approxMachine = new FastApprox(new Random(1));
-//                for (Node component : problemInstance.getF2().getComponents()) {
-//
-//                    if (!TreeUtils.validateSiblingRelation(component)){
-//                        System.out.println("Break bad siblings in approx before cut");
-//                    }
-//                }
                 if (approxMachine.testsFastApprox(new ProblemInstance(problemInstance)) / 3 > k) {
                     //System.out.println("Stop search do to lower bound from 3-approx");
                     if (trackData) {
                         dt.failedBranchCount++;
                     }
-
                     return false;
                 }
             }
+            FitchTool disjointChecker = new FitchTool(problemInstance);
 
+            if (useParsimonyLowerBound) {
+                //] break early if possible
+            }
 
-            List<Conflict> conflicts;
-            if (problemInstance.getF2().getComponents().size() > 1) {
-                FitchTool disjointChecker = new FitchTool(problemInstance);
-//                System.out.println("Fitch on " + problemInstance.getF2().getComponents().size() + " components");
-//                System.out.println("Fitch result: " + disjointChecker.getPScore());
-                if (disjointChecker.getPScore() == problemInstance.getF2().getComponents().size() - 1) {
-                    // do decompose
-                    decomposeCounter++;
-                    //System.out.println("Before decompose");
-                    //printNumStates();
-                    DecomposeTool decomposeTool = new DecomposeTool(problemInstance, t, args, randomizer);
-                    long startTime = System.nanoTime();
-                    boolean isPossible = decomposeTool.decomposeProblem(k);
-                    long finishTime = System.nanoTime();
-                    double duration = (double) (finishTime - startTime) /1000000;
+            List<Conflict> conflicts = new ArrayList<>();
+            List<Cherry> cherries = findCherries();
+            boolean skipDecompose = false;
+            // todo: implement 3-2 reduction
+            if (!useWhiddemTrick) {
+                conflicts = findCherryConflicts(cherries.getFirst());
+                // random cherry selection
+//                    int index = randomizer.nextInt(cherries.size());
+//                    conflicts = findCherryConflicts(cherries.get(index));
 
-                    if (isPossible) {
-                        currentCuts.addAll(decomposeTool.getTrueCurrentCuts());
-                    }
-                    numStates+= decomposeTool.totalStatesExplored;
-
-                    if (trackData) {
-                        dt.decomposeCounter++;
-                        dt.statesExplored += decomposeTool.totalStatesExplored;
-                        dt.decomposeTimes.add(duration);
-                        if (dt.justSplit) {
-                            dt.decomposeAfterSplitCounter++;
-                        }
-                    }
-                    //System.out.println("After decompose");
-                    //printNumStates();
-                    return isPossible;
-                } else {
-                    List<Cherry> cherries = findCherries();
-                    int index = randomizer.nextInt(cherries.size());
-                    conflicts = findCherryConflicts(cherries.get(index));
-                }
             } else {
+                Map<Cherry, List<Conflict>> cherryMap = new HashMap<>();
+                for (Cherry cherry : cherries) {
+                    List<Conflict> branchingOptions = findCherryConflicts(cherry);
 
-                List<Cherry> cherries = findCherries();
-                int index = randomizer.nextInt(cherries.size());
-                conflicts = findCherryConflicts(cherries.get(index));
-            } // HERE IS THE END
+                    if (branchingOptions.size() == 1) {
+                        conflicts = branchingOptions;
+                        skipDecompose = true;
+                        break;
+                    }
+                    cherryMap.put(cherry, branchingOptions);
+                }
 
+                if (conflicts.isEmpty()) {
+                    conflicts = cherryMap.get(cherries.getFirst());
+                }
+            }
+
+            if (problemInstance.getF2().getComponents().size() > 1 && disjointChecker.getPScore() == problemInstance.getF2().getComponents().size() - 1 && !skipDecompose) {
+                // do decompose
+                decomposeCounter++;
+                //System.out.println("Before decompose");
+                //printNumStates();
+                DecomposeTool decomposeTool = new DecomposeTool(problemInstance, t, args, randomizer);
+                long startTime = System.nanoTime();
+                boolean isPossible = decomposeTool.decomposeProblem(k);
+                long finishTime = System.nanoTime();
+                double duration = (double) (finishTime - startTime) /1000000;
+
+                if (isPossible) {
+                    currentCuts.addAll(decomposeTool.getTrueCurrentCuts());
+                }
+                numStates+= decomposeTool.totalStatesExplored;
+
+                if (trackData) {
+                    dt.decomposeCounter++;
+                    dt.statesExplored += decomposeTool.totalStatesExplored;
+                    dt.decomposeTimes.add(duration);
+                    if (dt.justSplit) {
+                        dt.decomposeAfterSplitCounter++;
+                    }
+                }
+                //System.out.println("After decompose");
+                //printNumStates();
+                return isPossible;
+            }
+
+
+         // HERE IS THE END
             boolean isPossible = false;
             for (Conflict conflict : conflicts) {
                 UndoMachine um = new UndoMachine();
