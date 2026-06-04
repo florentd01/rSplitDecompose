@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Random;
 
 import static utils.ExperimentTool.problemInstanceWithRhoFromTreeStringArray;
+import static utils.ExperimentTool.validateParentChildRelations;
 
 public class FastApprox {
 
@@ -45,34 +46,28 @@ public class FastApprox {
             return cuts;
         } else {
             List<Node> cutChildren = approxCutChildren(pI);
-            int j = 0;
             for (Node child : cutChildren) {
                 Node parent = child.getParent();
-
-                ApproxCut cut = new ApproxCut(child.getParent(), child, pI.getF2());
-
-                int k = 0;
-                for (Node component : pI.getF2().getComponents()) {
-                    //System.out.println("checking component: " + k);
-                    if (!TreeUtils.validateSiblingRelation(component)){
-                        System.out.println("Break bad siblings in approx before cut");
-                    }
-                }
-
-
+                ApproxCut cut = new ApproxCut(parent, child, pI.getF2());
+//                int k = 0;
+//                for (Node component : pI.getF2().getComponents()) {
+//                    //System.out.println("checking component: " + k);
+//                    if (!TreeUtils.validateSiblingRelation(component)){
+//                        System.out.println("Break bad siblings in approx before cut");
+//                    }
+//                }
                 cut.makeCut();
 
-                for (Node component : pI.getF2().getComponents()) {
-                    if (!TreeUtils.validateSiblingRelation(component)){
-                        System.out.println("Break bad siblings in approx after cut");
-                    }
-                }
+//                for (Node component : pI.getF2().getComponents()) {
+//                    if (!TreeUtils.validateSiblingRelation(component)){
+//                        System.out.println("Break bad siblings in approx after cut");
+//                    }
+//                }
                 cuts++;
 //                System.out.println("After Cut before Norm");
 //                pI.printTrees();
                 //approxNormalizeTree(new UndoMachine(), pI);
                 // TODO: makes sure to remove empty internal nodes as well
-                j++ ;
             }
 
             for (Node component : pI.getF2().getComponents()) {
@@ -90,6 +85,7 @@ public class FastApprox {
     private List<Node> approxCutChildren(ProblemInstance pI) {
         List<Node> cutChildren = new ArrayList<>();
         List<Cherry> cherries = findCherries(pI);
+
 
         int index = randomizer.nextInt(cherries.size());
         Cherry cherry = cherries.get(index);
