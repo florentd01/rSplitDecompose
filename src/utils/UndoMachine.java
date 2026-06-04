@@ -8,6 +8,7 @@ import Model.Node;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class UndoMachine {
@@ -182,7 +183,12 @@ public class UndoMachine {
         @Override
         public void undo() {
             F2.getLeavesByLabel().put(component.getLabel(), component);
+            //System.out.println("Undoing singleton Removal\nAdding component " + component.getLabel() + " at position " + indexF2);
+            if (F2.getComponents().size() < indexF2) {
+                System.out.println("UNDO SINGLETON COMPONENT MISMATCH");
+            }
             F2.addComponent(indexF2, component);
+
             switch (caseNum) {
                 case 0:
                     //System.out.println("we got here somehow");
@@ -215,7 +221,6 @@ public class UndoMachine {
                     siblingOfRemoved.setParent(parentOfRemoved);
                     T1.getLeavesByLabel().put(componentInT1.getLabel(), componentInT1);
                     break;
-
             }
         }
     }

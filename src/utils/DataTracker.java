@@ -2,6 +2,8 @@ package utils;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 
 public class DataTracker {
@@ -10,8 +12,14 @@ public class DataTracker {
     public long decomposeCounter = 0;
     public long defaultWhiddenCounter = 0;
     public long failedBranchCount = 0;
+    public long threeTwoReductionCount = 0;
+    public long threeApproxTriggered = 0;
+
+    public boolean printTrees;
 
     public long decomposeAfterSplitCounter = 0;
+
+    public long totalTimeMilis;
 
 
     public List<Double> splitTimes = new ArrayList<>();
@@ -20,6 +28,10 @@ public class DataTracker {
     
     public final List<Long> splittingCoreSizes = new ArrayList<>();
     public final List<Long> splittingCoreSearchTimes = new ArrayList<>();
+
+    public HashMap<Integer, List<SearchTreeNode>> whiddenSplitCompareMap= new HashMap<>();
+
+    private int currentSearchTreeNodeID = 0;
 
     private final String logFilePath;
 
@@ -32,6 +44,19 @@ public class DataTracker {
         this.algType = algType;
     }
 
+    public DataTracker(String logFilePath, String algType, boolean bool){
+        this.logFilePath = logFilePath;
+        this.algType = algType;
+        this.printTrees = bool;
+    }
+
+    public void reset() {
+        this.statesExplored = 0;
+    }
+
+    public int getCurrentSearchTreeNodeID() {
+        return currentSearchTreeNodeID;
+    }
     public void printToConsole() {
         StringBuilder sb = new StringBuilder();
         sb.append("Total states explored: ").append(statesExplored).append(System.lineSeparator());

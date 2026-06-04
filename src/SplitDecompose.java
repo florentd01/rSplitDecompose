@@ -1,13 +1,12 @@
 import Algorithm.MAFSolver;
 import Model.Forest;
-import Model.Node;
 import Model.ProblemInstance;
+import Model.Result;
 import utils.DataTracker;
 import utils.ExperimentTool;
 import utils.TreeUtils;
 
 import java.io.*;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -237,6 +236,12 @@ public class SplitDecompose {
 
     }
 
+    public static int runSingleConfig(DataTracker dt, String[] config, String trees) {
+
+
+        return -1;
+    }
+
     public static int testMain(String[] args) {
         File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\trees1.txt");
 
@@ -307,21 +312,105 @@ public class SplitDecompose {
         return -1;
     }
 
+    public static int runAlg(MAFSolver solver, int maxK) {
+        for (int i = 0; i <= maxK; i++) {
+            solver.getDt().reset();
+            System.out.println("SEARCHING AT K = " + i);
+            boolean works = solver.advancedSearch(i);
+
+            if (works) {
+                System.out.println();
+                solver.printNumStates();
+                System.out.println();
+                System.out.println("---------------------------------");
+                System.out.println("Solvable in " + i + " cuts\n\n");
+                return i;
+            } else {
+                System.out.println(i + " cuts not enough\n\n");
+            }
+        }
+        return -1;
+    }
+
+    public static int runAlg(MAFSolver solver, int maxK, boolean isVerbose) {
+        for (int i = 0; i <= maxK; i++) {
+            solver.getDt().reset();
+            if (isVerbose) {
+                System.out.println("SEARCHING AT K = " + i);
+            }
+
+            boolean works = solver.advancedSearch(i);
+
+            if (works) {
+                if (isVerbose) {
+                    System.out.println();
+                    solver.printNumStates();
+                    System.out.println();
+                    System.out.println("---------------------------------");
+                    System.out.println("Solvable in " + i + " cuts\n\n");
+                }
+
+                return i;
+            } else {
+                if (isVerbose) {
+                    System.out.println(i + " cuts not enough\n\n");
+                }
+
+            }
+        }
+        return -1;
+    }
+
+    public static Result runAlgTimed(MAFSolver solver, int maxK, boolean isVerbose) {
+        for (int i = 0; i <= maxK; i++) {
+            solver.getDt().reset();
+            if (isVerbose) {
+                System.out.println("SEARCHING AT K = " + i);
+            }
+
+            Result res = solver.advancedTimerSearch(i);
+            if (res.timeOut()) {
+                return res;
+            }
+            if (res.hasSolution()) {
+                if (isVerbose) {
+                    System.out.println();
+                    solver.printNumStates();
+                    System.out.println();
+                    System.out.println("---------------------------------");
+                    System.out.println("Solvable in " + i + " cuts\n\n");
+                }
+                return res;
+
+            } else {
+                if (isVerbose) {
+                    System.out.println(i + " cuts not enough\n\n");
+                }
+            }
+
+        }
+
+        return null;
+    }
+
 
     public static void main (String[] args){
         //File treeFile = new File(args[0]);
         //File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\trees_100_17.txt");
         //File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\treesLARGE.txt");
-        File treeFile = new File ("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\tree_2_test.txt");
+        File treeFile = new File("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\TreeGen\\test2_35");
+        //File treeFile = new File ("C:\\Users\\Florent\\IdeaProjects\\rSplitDecompose\\test_trees\\rspr_test_trees\\tree_2_test.txt");
 
         try {
             ProblemInstance pi = readProblemInstanceFromFileWithRho(treeFile);
             //ProblemInstance pi = ExperimentTool.readProblemFromFile(treeFile);
-            pi.printTrees();
+            //pi.printTrees();
 
-            String[] arguments = new String[] {"default", "2", "approx", "whidden-trick"};
-//            arguments[0] = "split-decompose";
-//            //arguments[0] = args[1];
+            // split-decompose
+            String[] arguments = new String[] {"split-decompose-V2", "2", "no-approx", "3-2", "no-parsimony"};
+//            arguments[0] = "split-V2";
+//            arguments[0] = "split-decompose-V2";
+//            //arguments[0] = args[1]\
 //            //arguments[1] = args[2];
 //            arguments[1] = "2";
 
@@ -330,19 +419,28 @@ public class SplitDecompose {
 
             Date d1 = new Date();
 
-            MAFSolver solver = new MAFSolver(pi, new Random(), arguments, new DataTracker("", ""));
+            DataTracker dt = new DataTracker("", arguments[0]);
+            long deadline = System.nanoTime() + 5 * 1_000_000_000L;
+            MAFSolver solver = new MAFSolver(pi, new Random(), arguments, dt, deadline);
 
 
 
 
-            for (int i = 1; i < 71; i++) {
+
+
+            for (int i = 0; i < 71; i++) {
                 System.out.println("SEARCHING AT K = " + i);
                 System.out.println("Configuration: " + arguments[0]);
-                boolean works = solver.advancedSearch(i);
+                Result works = solver.advancedTimerSearch(i);
+                System.out.println("Split " + solver.getSplitCounter() + " times");
+                if (works.timeOut()){
+                    System.out.println("TIMED OUT");
+                    break;
+                }
 
-                if (works) {
+                if (works.hasSolution()) {
                     System.out.println();
-                    solver.printNumStates();
+                    System.out.println("Explored " + solver.getDt().statesExplored + " states");
                     System.out.println();
                     System.out.println("---------------------------------");
                     System.out.println("Solvable in " + i + " cuts\n\n");
@@ -359,18 +457,19 @@ public class SplitDecompose {
 
 
             TreeUtils.applySolution(F2origin, solver.getCurrentCuts());
-            for (Node root : F2origin.getComponents()) {
-                TreeUtils.removeRho(root);
-            }
-            List<String> newickComponents = F2origin.toNewickList();
-            System.out.println();
-            System.out.println("OPT:");
-            for (String s : newickComponents) {
-                System.out.println(s);
-            }
-
-            System.out.println("\n\n\nSplit " + solver.getSplitCounter() + " times");
-            System.out.println("Decomposed " + solver.getDecomposeCounter() + " times\n\n\n");
+//            for (Node root : F2origin.getComponents()) {
+//                TreeUtils.removeRho(root);
+//            }
+//            List<String> newickComponents = F2origin.toNewickList();
+//            System.out.println();
+//            System.out.println("OPT:");
+//            for (String s : newickComponents) {
+//                System.out.println(s);
+//            }
+//
+//            System.out.println("\nSplit " + solver.getSplitCounter() + " times");
+//            System.out.println("Decomposed " + dt.decomposeCounter + " times");
+//            System.out.println("Three-two reductions: " + dt.threeTwoReductionCount + "\n\n\n");
 
 
             Date d2 = new Date();

@@ -3,20 +3,25 @@ package Algorithm;
 import Model.Forest;
 import Model.Node;
 import Model.ProblemInstance;
-import utils.FitchTool;
-import utils.TreeUtils;
-import utils.UndoMachine;
+import Model.Result;
+import utils.*;
+import utils.RandomRSPR.Token;
 
+import javax.xml.crypto.Data;
 import java.util.*;
 
 public class DecomposeTool {
     ProblemInstance mainProblem;
     List<ProblemInstance> subProblems = new ArrayList<>();
+    boolean useTimeout;
+    long timeLimit;
 
     int t;
     int totalStatesExplored;
     String[] args;
     Random randomizer;
+
+    DataTracker dt;
 
     List<Cut> trueCurrentCut = new ArrayList<>();
 
@@ -31,12 +36,27 @@ public class DecomposeTool {
         this.args = args;
     }
 
-    public DecomposeTool(ProblemInstance pi, int t, String[] args, Random randomizer) {
+    public DecomposeTool(ProblemInstance pi, int t, String[] args, Random randomizer, DataTracker dt) {
         this.mainProblem = pi;
         //pi.printTrees();
         this.t = t;
         this.args = args;
         this.randomizer = randomizer;
+        this.dt = dt;
+        this.useTimeout = false;
+        //System.out.println(Arrays.toString(args));
+        //System.out.println("New decomposer created");
+    }
+
+    public DecomposeTool(ProblemInstance pi, int t, String[] args, Random randomizer, DataTracker dt, long timeLimit) {
+        this.mainProblem = pi;
+        //pi.printTrees();
+        this.t = t;
+        this.args = args;
+        this.randomizer = randomizer;
+        this.dt = dt;
+        this.useTimeout = true;
+        this.timeLimit = timeLimit;
         //System.out.println(Arrays.toString(args));
         //System.out.println("New decomposer created");
     }
@@ -71,8 +91,11 @@ public class DecomposeTool {
             MAFSolver solver = new MAFSolver(subInstance, randomizer);
             for (int j = 0; j <= t; j++) {
                 boolean works = solver.search(j);
-                this.totalStatesExplored+= solver.getNumStates();
+                if (j == t && !works) {
+                    this.totalStatesExplored+= solver.getNumStates();
+                }
                 if (works) {
+                    this.totalStatesExplored+= solver.getNumStates();
                     //System.out.println("Sub instance solved in " + j + " cuts");
                     cutsAddedCounter += solver.getCurrentCuts().size();
                     trueCurrentCut.addAll(solver.getCurrentCuts());
@@ -103,7 +126,7 @@ public class DecomposeTool {
         int[] finalResults = new int[resultsList.length];
         for (int i = 0; i < resultsList.length; i++) {
             if (resultsList[i] > t) {
-                MAFSolver solver = new MAFSolver(subProblems.get(i), randomizer, args);
+                MAFSolver solver = new MAFSolver(subProblems.get(i), randomizer, args, dt);
                 int resultsSum = 0;
                 for (int j = 0; j < resultsList.length; j++) {
                     if (j != i) {
@@ -119,8 +142,12 @@ public class DecomposeTool {
                 boolean isPossible = false;
                 for (int j = 1; j <= newMaxDepth; j++) {
                     isPossible = solver.advancedSearch(j);
-                    totalStatesExplored+= solver.getNumStates();
+
+                    if (j == newMaxDepth && !isPossible) {
+                        totalStatesExplored+= solver.getNumStates();
+                    }
                     if (isPossible) {
+                        totalStatesExplored+= solver.getNumStates();
                         cutsAddedCounter += solver.getCurrentCuts().size();
                         trueCurrentCut.addAll(solver.getCurrentCuts());
                         finalResults[i] = j;
@@ -128,6 +155,117 @@ public class DecomposeTool {
                     }
                 }
                 //isPossible = solver.advancedSearch(newMaxDepth, args);
+                if (!isPossible) {
+                    // step 3 if any of the subproblems from step 2 could not be solved returns false
+                    trueCurrentCut.subList(trueCurrentCut.size()-cutsAddedCounter, trueCurrentCut.size()).clear();
+                    return false;
+                }
+
+            } else {
+                finalResults[i] = resultsList[i];
+            }
+        }
+//        System.out.println("For budget of k in decompose");
+//        System.out.println("Final result array: " + Arrays.toString(finalResults));
+        if (Arrays.stream(finalResults).sum() <= k) {
+            return true;
+        } else {
+            trueCurrentCut.subList(trueCurrentCut.size()-cutsAddedCounter, trueCurrentCut.size()).clear();
+            return false;
+        }
+    }
+
+    public boolean decomposeProblemWithTimer(int k){
+        if (k < 1) {
+            return false;
+        }
+        if (System.nanoTime() > timeLimit) { throw new TimeoutException("Out of time");}
+        // set up subproblems             done
+        buildSubInstances();
+//        for (ProblemInstance pi : subProblems) {
+//            System.out.println("Printing sub instance");
+//            pi.printTrees();
+//        }
+        // step 1 solve all subproblems to t
+        Integer[] resultsList = new Integer[subProblems.size()];
+        int cutsAddedCounter = 0;
+
+        for (int i = 0; i < this.subProblems.size(); i++) {
+            ProblemInstance subInstance = this.subProblems.get(i);
+            MAFSolver solver = new MAFSolver(subInstance, randomizer);
+            for (int j = 0; j <= t; j++) {
+                boolean works = solver.search(j);
+                if (j == t && !works) {
+                    this.totalStatesExplored+= solver.getNumStates();
+                }
+                if (works) {
+                    this.totalStatesExplored+= solver.getNumStates();
+                    //System.out.println("Sub instance solved in " + j + " cuts");
+                    cutsAddedCounter += solver.getCurrentCuts().size();
+                    trueCurrentCut.addAll(solver.getCurrentCuts());
+                    resultsList[i] = j;
+                    break;
+                }
+            }
+
+//            for (Cut cut : trueCurrentCut) {
+//                if (cut.getProblemParent().getId() ==1) {
+//                    System.out.println("break");
+//                }
+//            }
+
+            if (resultsList[i] == null) {
+                resultsList[i] = t+1;
+            }
+
+        }
+        // step 2 for all subproblems that could not be solved to t, solve to depth k-(sum of returns from solveToT for all other subproblems)
+
+
+        subProblems = new ArrayList<>();
+        buildSubInstances();
+
+        //System.out.println(Arrays.toString(resultsList));
+
+        int[] finalResults = new int[resultsList.length];
+        for (int i = 0; i < resultsList.length; i++) {
+            if (resultsList[i] > t) {
+                DataTracker subDT = new DataTracker("", args[0]);
+                MAFSolver solver = new MAFSolver(subProblems.get(i), randomizer, args, subDT, timeLimit );
+                int resultsSum = 0;
+                for (int j = 0; j < resultsList.length; j++) {
+                    if (j != i) {
+                        resultsSum+= resultsList[j];
+                    }
+                }
+                int newMaxDepth = k - resultsSum;
+
+                if (newMaxDepth < 1) {
+                    return false;
+                }
+
+                boolean isPossible = false;
+                for (int j = 1; j <= newMaxDepth; j++) {
+                    if (System.nanoTime() > timeLimit) { throw new TimeoutException("Out of time during Decompose");}
+                    subDT.reset();
+                    Result res = solver.advancedTimerSearch(i);
+                    isPossible = res.hasSolution();
+                    if (res.timeOut()) {
+                        throw new TimeoutException("");
+                    }
+                    if (isPossible) {
+                        totalStatesExplored += (int) subDT.statesExplored;
+                        cutsAddedCounter += solver.getCurrentCuts().size();
+                        trueCurrentCut.addAll(solver.getCurrentCuts());
+                        finalResults[i] = j;
+                        break;
+                    }
+
+                    if (j == newMaxDepth) {
+                        totalStatesExplored+=  (int) subDT.statesExplored;
+                    }
+                }
+
                 if (!isPossible) {
                     // step 3 if any of the subproblems from step 2 could not be solved returns false
                     trueCurrentCut.subList(trueCurrentCut.size()-cutsAddedCounter, trueCurrentCut.size()).clear();
